@@ -1,0 +1,372 @@
+{% extends "base.html" %} {% block title %}Speech to Text - {{ super() }}{%
+endblock %} {% block content %}
+<div class="row">
+  <div class="col-12">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">Home</a></li>
+        <li
+          setInterval(updateSystemStatus,
+          5000);class="breadcrumb-item active"
+        >
+          Speech to Text
+        </li>
+      </ol>
+    </nav>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="fas fa-microphone me-2"></i>Speech Recognition
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <button id="listenOnceBtn" class="btn btn-primary me-2">
+            <i class="fas fa-microphone"></i> Listen Once
+          </button>
+          <button id="startContinuousBtn" class="btn btn-success me-2">
+            <i class="fas fa-play"></i> Start Continuous
+          </button>
+          <button id="stopContinuousBtn" class="btn btn-danger" disabled>
+            <i class="fas fa-stop"></i> Stop Continuous
+          </button>
+        </div>
+
+        <div id="statusIndicator" class="alert alert-info">
+          <i class="fas fa-info-circle"></i> Ready to listen
+        </div>
+
+        <div class="mb-3">
+          <label for="textInput" class="form-label">Or type a command:</label>
+          <div class="input-group">
+            <input
+              type="text"
+              class="form-control"
+              id="textInput"
+              placeholder="Type your command here..."
+            />
+            <button class="btn btn-outline-primary" id="processTextBtn">
+              <i class="fas fa-paper-plane"></i> Process
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h6 class="mb-0">System Status</h6>
+      </div>
+      <div class="card-body">
+        <div id="systemStatus">
+          <div class="text-center">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span class="ms-2">Loading...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div
+        class="card-header d-flex justify-content-between align-items-center"
+      >
+        <h6 class="mb-0">Recognition Results</h6>
+        <button id="clearResultsBtn" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-trash"></i> Clear
+        </button>
+      </div>
+      <div class="card-body">
+        <div id="resultsContainer" style="max-height: 400px; overflow-y: auto">
+          <div class="text-center text-muted">
+            <i class="fas fa-microphone-slash"></i>
+            <p>
+              No results yet. Start listening to see recognized speech here.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  let continuousActive = false;
+  let resultsPollInterval = null;
+
+  // DOM elements
+  const listenOnceBtn = document.getElementById("listenOnceBtn");
+  const startContinuousBtn = document.getElementById("startContinuousBtn");
+  const stopContinuousBtn = document.getElementById("stopContinuousBtn");
+  const statusIndicator = document.getElementById("statusIndicator");
+  const resultsContainer = document.getElementById("resultsContainer");
+  const clearResultsBtn = document.getElementById("clearResultsBtn");
+  const textInput = document.getElementById("textInput");
+  const processTextBtn = document.getElementById("processTextBtn");
+  const systemStatus = document.getElementById("systemStatus");
+
+  // Status update
+  function updateStatus(message, type = "info") {
+    statusIndicator.className = `alert alert-${type}`;
+    statusIndicator.innerHTML = `<i class="fas fa-${
+      type === "info"
+        ? "info-circle"
+        : type === "success"
+        ? "check-circle"
+        : type === "warning"
+        ? "exclamation-triangle"
+        : "times-circle"
+    }"></i> ${message}`;
+  }
+
+  // System status update
+  function updateSystemStatus() {
+    fetch("/api/modules/status")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          const status = data.data;
+          let html = '<div class="small">';
+          html += `<div><strong>Core:</strong> ${
+            status.core_active ? "Active" : "Inactive"
+          }</div>`;
+          if (status.modules.speech_to_text) {
+            const stt = status.modules.speech_to_text;
+            html += `<div><strong>STT:</strong> ${
+              stt.is_listening ? "Listening" : "Ready"
+            }</div>`;
+            html += `<div><strong>Microphone:</strong> ${
+              stt.microphone_available ? "Available" : "Not Available"
+            }</div>`;
+          }
+          html += "</div>";
+          systemStatus.innerHTML = html;
+        } else {
+          systemStatus.innerHTML =
+            '<div class="text-danger small">Error loading status</div>';
+        }
+      })
+      .catch((error) => {
+        systemStatus.innerHTML =
+          '<div class="text-danger small">Connection error</div>';
+      });
+  }
+
+  // Listen once
+  listenOnceBtn.addEventListener("click", function () {
+    updateStatus("Listening... Please speak now", "warning");
+    listenOnceBtn.disabled = true;
+
+    fetch("/api/speech/listen-once", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ timeout: 10 }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success && data.data.text) {
+          updateStatus(`Recognized: "${data.data.text}"`, "success");
+          addResult(data.data.text, data.data.timestamp, "single");
+        } else {
+          updateStatus("No speech detected or recognition failed", "warning");
+        }
+      })
+      .catch((error) => {
+        updateStatus("Error during recognition", "danger");
+      })
+      .finally(() => {
+        listenOnceBtn.disabled = false;
+      });
+  });
+
+  // Start continuous listening
+  startContinuousBtn.addEventListener("click", function () {
+    fetch("/api/speech/start-continuous", { method: "POST" })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          continuousActive = true;
+          updateStatus("Continuous listening active...", "success");
+          startContinuousBtn.disabled = true;
+          stopContinuousBtn.disabled = false;
+
+          // Start polling for results
+          resultsPollInterval = setInterval(pollResults, 1000);
+        } else {
+          updateStatus("Failed to start continuous listening", "danger");
+        }
+      })
+      .catch((error) => {
+        updateStatus("Error starting continuous listening", "danger");
+      });
+  });
+
+  // Stop continuous listening
+  stopContinuousBtn.addEventListener("click", function () {
+    fetch("/api/speech/stop-continuous", { method: "POST" })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          continuousActive = false;
+          updateStatus("Continuous listening stopped", "info");
+          startContinuousBtn.disabled = false;
+          stopContinuousBtn.disabled = true;
+
+          // Stop polling
+          if (resultsPollInterval) {
+            clearInterval(resultsPollInterval);
+            resultsPollInterval = null;
+          }
+        } else {
+          updateStatus("Failed to stop continuous listening", "danger");
+        }
+      })
+      .catch((error) => {
+        updateStatus("Error stopping continuous listening", "danger");
+      });
+  });
+
+  // Process text command
+  processTextBtn.addEventListener("click", function () {
+    const text = textInput.value.trim();
+    if (!text) return;
+
+    fetch("/api/speech/process-text", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          updateStatus(`Processed: "${data.data.input}"`, "success");
+          addResult(
+            data.data.input,
+            data.data.timestamp,
+            "text",
+            data.data.response
+          );
+          textInput.value = "";
+        } else {
+          updateStatus("Failed to process text command", "danger");
+        }
+      })
+      .catch((error) => {
+        updateStatus("Error processing text command", "danger");
+      });
+  });
+
+  // Poll for continuous results
+  function pollResults() {
+    fetch("/api/speech/results")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          const results = data.data.results;
+          if (results.length > 0) {
+            // Update results display
+            displayResults(results);
+          }
+        }
+      })
+      .catch((error) => {});
+  }
+
+  // Display results
+  function displayResults(results) {
+    if (results.length === 0) return;
+
+    resultsContainer.innerHTML = "";
+    results
+      .slice(-10)
+      .reverse()
+      .forEach((result) => {
+        addResultElement(result.text, result.timestamp, "continuous");
+      });
+  }
+
+  // Add single result
+  function addResult(text, timestamp, type, response = null) {
+    if (resultsContainer.innerHTML.includes("No results yet")) {
+      resultsContainer.innerHTML = "";
+    }
+    addResultElement(text, timestamp, type, response);
+  }
+
+  // Add result element
+  function addResultElement(text, timestamp, type, response = null) {
+    const resultDiv = document.createElement("div");
+    resultDiv.className = "border-bottom pb-2 mb-2";
+
+    const typeColor =
+      type === "single"
+        ? "primary"
+        : type === "continuous"
+        ? "success"
+        : "info";
+    const typeIcon =
+      type === "single"
+        ? "microphone"
+        : type === "continuous"
+        ? "volume-up"
+        : "keyboard";
+
+    let html = `
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <span class="badge bg-${typeColor} me-2">
+                    <i class="fas fa-${typeIcon}"></i> ${type}
+                </span>
+                <strong>${text}</strong>
+            </div>
+            <small class="text-muted">${new Date(
+              timestamp
+            ).toLocaleTimeString()}</small>
+        </div>
+    `;
+
+    if (response) {
+      html += `<div class="mt-1 text-muted small"><strong>Response:</strong> ${response}</div>`;
+    }
+
+    resultDiv.innerHTML = html;
+    resultsContainer.insertBefore(resultDiv, resultsContainer.firstChild);
+
+    while (resultsContainer.children.length > 20) {
+      resultsContainer.removeChild(resultsContainer.lastChild);
+    }
+  }
+
+  // Clear results
+  clearResultsBtn.addEventListener("click", function () {
+    resultsContainer.innerHTML = `
+        <div class="text-center text-muted">
+            <i class="fas fa-microphone-slash"></i>
+            <p>No results yet. Start listening to see recognized speech here.</p>
+        </div>
+    `;
+  });
+
+  // Enter key for text input
+  textInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      processTextBtn.click();
+    }
+  });
+
+  // Initialize
+  updateSystemStatus();
+  setInterval(updateSystemStatus, 5000); // Update every 5 seconds
+</script>
+{% endblock %}

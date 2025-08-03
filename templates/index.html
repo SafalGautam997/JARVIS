@@ -1,0 +1,71 @@
+{% extends "base.html" %} {% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="jumbotron bg-primary text-white p-5 rounded mb-4">
+      <h1 class="display-4">Welcome to {{ app_config.name }}</h1>
+      <p class="lead">{{ app_config.description }}</p>
+      <hr class="my-4" />
+      <p>Select a module to get started with your AI assistant.</p>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 mb-4">
+    <h2>Available Modules</h2>
+  </div>
+</div>
+
+<div class="row">
+  {% for module_name, module_config in modules.items() %}
+  <div class="col-md-6 col-lg-4 mb-4">
+    <div
+      class="card module-card h-100 {{ 'module-enabled' if module_config.enabled else 'module-disabled' }}"
+    >
+      <div class="card-body">
+        <h5 class="card-title">
+          {% if module_name == 'speech_to_text' %}
+          <i class="fas fa-microphone me-2"></i>Speech to Text {% elif
+          module_name == 'text_to_speech' %}
+          <i class="fas fa-volume-up me-2"></i>Text to Speech {% elif
+          module_name == 'nlp_module' %} <i class="fas fa-brain me-2"></i>NLP
+          Module {% elif module_name == 'task_manager' %}
+          <i class="fas fa-tasks me-2"></i>Task Manager {% elif module_name ==
+          'calendar_module' %} <i class="fas fa-calendar me-2"></i>Calendar {%
+          elif module_name == 'email_module' %}
+          <i class="fas fa-envelope me-2"></i>Email {% elif module_name ==
+          'weather_module' %} <i class="fas fa-cloud-sun me-2"></i>Weather {%
+          elif module_name == 'web_search' %}
+          <i class="fas fa-search me-2"></i>Web Search {% elif module_name ==
+          'auth_module' %} <i class="fas fa-lock me-2"></i>Authentication {%
+          elif module_name == 'datetime_module' %}
+          <i class="fas fa-clock me-2"></i>Date Time {% else %}
+          <i class="fas fa-cog me-2"></i>{{ module_name.replace('_', '
+          ').title() }} {% endif %}
+        </h5>
+        <p class="card-text">
+          {% if module_config.enabled %}
+          <span class="badge bg-success">Enabled</span>
+          {% else %}
+          <span class="badge bg-secondary">Disabled</span>
+          {% endif %}
+        </p>
+        {% if module_config.enabled %} {% if module_name == 'speech_to_text' %}
+        <a href="/speech-to-text" class="btn btn-primary">Open Module</a>
+        {% elif module_name == 'text_to_speech' %}
+        <a href="/text-to-speech" class="btn btn-primary">Open Module</a>
+        {% elif module_name == 'calendar_module' %}
+        <a href="/calendar" class="btn btn-primary">Open Module</a>
+        {% elif module_name == 'datetime_module' %}
+        <a href="/datetime" class="btn btn-primary">Open Module</a>
+        {% else %}
+        <button class="btn btn-secondary" disabled>Coming Soon</button>
+        {% endif %} {% else %}
+        <button class="btn btn-secondary" disabled>Module Disabled</button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

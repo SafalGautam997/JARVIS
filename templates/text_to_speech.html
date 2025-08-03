@@ -1,0 +1,342 @@
+{% extends "base.html" %} {% block title %}Text to Speech - {{ super() }}{%
+endblock %} {% block content %}
+<div class="row">
+  <div class="col-12">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">Home</a></li>
+        <li class="breadcrumb-item active">Text to Speech</li>
+      </ol>
+    </nav>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="fas fa-volume-up me-2"></i>Text to Speech
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label for="textToSpeak" class="form-label"
+            >Enter text to speak:</label
+          >
+          <textarea
+            class="form-control"
+            id="textToSpeak"
+            rows="4"
+            placeholder="Type the text you want JARVIS to speak..."
+          ></textarea>
+        </div>
+
+        <div class="mb-3">
+          <button id="speakBtn" class="btn btn-primary me-2">
+            <i class="fas fa-play"></i> Speak Text
+          </button>
+          <button id="stopBtn" class="btn btn-danger me-2" disabled>
+            <i class="fas fa-stop"></i> Stop Speaking
+          </button>
+          <button id="clearBtn" class="btn btn-outline-secondary">
+            <i class="fas fa-eraser"></i> Clear Text
+          </button>
+        </div>
+
+        <div id="statusIndicator" class="alert alert-info">
+          <i class="fas fa-info-circle"></i> Ready to speak
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <label for="voiceRate" class="form-label"
+              >Speech Rate: <span id="rateValue">200 WPM</span></label
+            >
+            <input
+              type="range"
+              class="form-range"
+              id="voiceRate"
+              min="50"
+              max="300"
+              value="200"
+            />
+          </div>
+          <div class="col-md-6">
+            <label for="voiceVolume" class="form-label"
+              >Volume: <span id="volumeValue">90%</span></label
+            >
+            <input
+              type="range"
+              class="form-range"
+              id="voiceVolume"
+              min="0"
+              max="100"
+              value="90"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <h6 class="mb-0">Quick Phrases</h6>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6 mb-2">
+            <button
+              class="btn btn-outline-primary btn-sm quick-phrase w-100"
+              data-text="Hello! I am JARVIS, your virtual assistant."
+            >
+              Greeting
+            </button>
+          </div>
+          <div class="col-md-6 mb-2">
+            <button
+              class="btn btn-outline-primary btn-sm quick-phrase w-100"
+              data-text="Good morning! How can I help you today?"
+            >
+              Morning Greeting
+            </button>
+          </div>
+          <div class="col-md-6 mb-2">
+            <button
+              class="btn btn-outline-primary btn-sm quick-phrase w-100"
+              data-text="Task completed successfully!"
+            >
+              Task Complete
+            </button>
+          </div>
+          <div class="col-md-6 mb-2">
+            <button
+              class="btn btn-outline-primary btn-sm quick-phrase w-100"
+              data-text="I'm sorry, I didn't understand that. Could you please repeat?"
+            >
+              Clarification
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h6 class="mb-0">TTS Status</h6>
+      </div>
+      <div class="card-body">
+        <div id="ttsStatus">
+          <div class="text-center">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span class="ms-2">Loading...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header">
+        <h6 class="mb-0">Recent Phrases</h6>
+      </div>
+      <div class="card-body">
+        <div id="recentPhrases" style="max-height: 300px; overflow-y: auto">
+          <div class="text-center text-muted">
+            <i class="fas fa-volume-mute"></i>
+            <p class="small">No phrases spoken yet</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  let isSpeaking = false;
+
+  // DOM elements
+  const textToSpeak = document.getElementById("textToSpeak");
+  const speakBtn = document.getElementById("speakBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const statusIndicator = document.getElementById("statusIndicator");
+  const voiceRate = document.getElementById("voiceRate");
+  const voiceVolume = document.getElementById("voiceVolume");
+  const rateValue = document.getElementById("rateValue");
+  const volumeValue = document.getElementById("volumeValue");
+  const ttsStatus = document.getElementById("ttsStatus");
+  const recentPhrases = document.getElementById("recentPhrases");
+  const quickPhrases = document.querySelectorAll(".quick-phrase");
+
+  // Status update
+  function updateStatus(message, type = "info") {
+    statusIndicator.className = `alert alert-${type}`;
+    statusIndicator.innerHTML = `<i class="fas fa-${
+      type === "info"
+        ? "info-circle"
+        : type === "success"
+        ? "check-circle"
+        : type === "warning"
+        ? "exclamation-triangle"
+        : "times-circle"
+    }"></i> ${message}`;
+  }
+
+  // Update TTS status
+  function updateTTSStatus() {
+    fetch("/api/modules/status")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success && data.data.modules.text_to_speech) {
+          const tts = data.data.modules.text_to_speech;
+          let html = '<div class="small">';
+          html += `<div><strong>Engine:</strong> ${
+            tts.engine_available ? "Available" : "Not Available"
+          }</div>`;
+          html += `<div><strong>Speaking:</strong> ${
+            tts.is_speaking ? "Yes" : "No"
+          }</div>`;
+          html += `<div><strong>Queue:</strong> ${tts.queue_size} items</div>`;
+          html += `<div><strong>Voices:</strong> ${tts.voices_available}</div>`;
+          html += "</div>";
+          ttsStatus.innerHTML = html;
+        } else {
+          ttsStatus.innerHTML =
+            '<div class="text-danger small">TTS module not available</div>';
+        }
+      })
+      .catch((error) => {
+        ttsStatus.innerHTML =
+          '<div class="text-danger small">Connection error</div>';
+      });
+  }
+
+  // Speak text
+  function speakText(text) {
+    if (!text.trim()) {
+      updateStatus("Please enter some text to speak", "warning");
+      return;
+    }
+
+    updateStatus("Speaking...", "info");
+    speakBtn.disabled = true;
+    stopBtn.disabled = false;
+    isSpeaking = true;
+
+    fetch("/api/tts/speak", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: text,
+        blocking: false,
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          updateStatus("Text spoken successfully", "success");
+          addToRecentPhrases(text);
+        } else {
+          updateStatus(`Error: ${data.error}`, "danger");
+        }
+      })
+      .catch((error) => {
+        updateStatus("Error speaking text", "danger");
+      })
+      .finally(() => {
+        setTimeout(() => {
+          speakBtn.disabled = false;
+          stopBtn.disabled = true;
+          isSpeaking = false;
+          updateStatus("Ready to speak", "info");
+        }, 1000);
+      });
+  }
+
+  // Add to recent phrases
+  function addToRecentPhrases(text) {
+    if (recentPhrases.innerHTML.includes("No phrases spoken yet")) {
+      recentPhrases.innerHTML = "";
+    }
+
+    const phraseDiv = document.createElement("div");
+    phraseDiv.className = "border-bottom pb-2 mb-2";
+    phraseDiv.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+                <small class="text-muted">${new Date().toLocaleTimeString()}</small>
+                <p class="mb-0 small">${text.substring(0, 100)}${
+      text.length > 100 ? "..." : ""
+    }</p>
+            </div>
+            <button class="btn btn-sm btn-outline-primary ms-2 repeat-phrase" data-text="${text}">
+                <i class="fas fa-redo"></i>
+            </button>
+        </div>
+    `;
+
+    recentPhrases.insertBefore(phraseDiv, recentPhrases.firstChild);
+
+    while (recentPhrases.children.length > 10) {
+      recentPhrases.removeChild(recentPhrases.lastChild);
+    }
+
+    // Add event listener to repeat button
+    phraseDiv
+      .querySelector(".repeat-phrase")
+      .addEventListener("click", function () {
+        textToSpeak.value = this.dataset.text;
+        speakText(this.dataset.text);
+      });
+  }
+
+  // Event listeners
+  speakBtn.addEventListener("click", function () {
+    speakText(textToSpeak.value);
+  });
+
+  stopBtn.addEventListener("click", function () {
+    updateStatus("Stop requested", "warning");
+    speakBtn.disabled = false;
+    stopBtn.disabled = true;
+    isSpeaking = false;
+  });
+
+  clearBtn.addEventListener("click", function () {
+    textToSpeak.value = "";
+    textToSpeak.focus();
+  });
+
+  // Voice rate slider
+  voiceRate.addEventListener("input", function () {
+    rateValue.textContent = `${this.value} WPM`;
+  });
+
+  // Volume slider
+  voiceVolume.addEventListener("input", function () {
+    volumeValue.textContent = `${this.value}%`;
+  });
+
+  // Quick phrases
+  quickPhrases.forEach((button) => {
+    button.addEventListener("click", function () {
+      const text = this.dataset.text;
+      textToSpeak.value = text;
+      speakText(text);
+    });
+  });
+
+  // Enter key support
+  textToSpeak.addEventListener("keydown", function (e) {
+    if (e.ctrlKey && e.key === "Enter") {
+      speakText(this.value);
+    }
+  });
+
+  // Initialize
+  updateTTSStatus();
+  setInterval(updateTTSStatus, 5000);
+</script>
+{% endblock %}

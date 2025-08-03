@@ -1,0 +1,466 @@
+{% extends "base.html" %} {% block title %}Date & Time - {{ super() }}{%
+endblock %} {% block content %}
+<div class="row">
+  <div class="col-12">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">Home</a></li>
+        <li class="breadcrumb-item active">Date & Time</li>
+      </ol>
+    </nav>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="fas fa-clock me-2"></i>Current Date & Time
+        </h5>
+      </div>
+      <div class="card-body text-center">
+        <!-- Nepal Time (Primary) -->
+        <div class="mb-4">
+          <h1 id="nepalTime" class="display-4 text-primary">--:--:--</h1>
+          <p class="text-muted lead">Nepal Time (NPT)</p>
+          <h4 id="nepalDate" class="text-secondary">Loading...</h4>
+          <p class="text-muted">Current Date</p>
+        </div>
+
+        <!-- UTC Time (Secondary) -->
+        <div class="mb-4 border-top pt-3">
+          <h2 id="utcTime" class="text-info">--:--:--</h2>
+          <p class="text-muted">Global Time (UTC)</p>
+          <h5 id="utcDate" class="text-secondary">Loading...</h5>
+          <p class="text-muted small">UTC Date</p>
+        </div>
+
+        <div class="row mt-3">
+          <div class="col-md-4">
+            <h5 id="dayOfWeek" class="text-info">Loading...</h5>
+            <p class="text-muted small">Day of Week</p>
+          </div>
+          <div class="col-md-4">
+            <h5 id="monthName" class="text-success">Loading...</h5>
+            <p class="text-muted small">Month</p>
+          </div>
+          <div class="col-md-4">
+            <h5 id="weekendStatus" class="text-warning">Loading...</h5>
+            <p class="text-muted small">Weekend Status</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <h6 class="mb-0">Time Utilities</h6>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-body">
+                <h6><i class="fas fa-stopwatch me-2"></i>Countdown Timer</h6>
+                <div class="mb-3">
+                  <label for="countdownTime" class="form-label"
+                    >Time (HH:MM)</label
+                  >
+                  <input
+                    type="time"
+                    class="form-control"
+                    id="countdownTime"
+                    value="00:05"
+                  />
+                </div>
+                <button id="startCountdown" class="btn btn-primary btn-sm me-2">
+                  Start
+                </button>
+                <button
+                  id="stopCountdown"
+                  class="btn btn-danger btn-sm"
+                  disabled
+                >
+                  Stop
+                </button>
+                <div id="countdownDisplay" class="mt-2 text-center">
+                  <h4 class="text-muted">00:00:00</h4>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-body">
+                <h6><i class="fas fa-clock me-2"></i>Time Until</h6>
+                <div class="mb-3">
+                  <label for="targetTime" class="form-label">Target Time</label>
+                  <input type="time" class="form-control" id="targetTime" />
+                </div>
+                <button id="calculateTimeUntil" class="btn btn-info btn-sm">
+                  Calculate
+                </button>
+                <div id="timeUntilDisplay" class="mt-2">
+                  <p class="text-muted small">Enter a time to see countdown</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <h6 class="mb-0">Natural Language Time Parsing</h6>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label for="naturalTime" class="form-label"
+            >Enter natural language time:</label
+          >
+          <input
+            type="text"
+            class="form-control"
+            id="naturalTime"
+            placeholder="e.g., 'tomorrow at 3pm', 'next monday', 'today at noon'"
+          />
+        </div>
+        <button id="parseTime" class="btn btn-success">Parse Time</button>
+        <div id="parseResult" class="mt-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h6 class="mb-0">Quick Actions</h6>
+      </div>
+      <div class="card-body">
+        <div class="d-grid gap-2">
+          <button class="btn btn-outline-primary btn-sm" id="speakTime">
+            <i class="fas fa-volume-up me-2"></i>Speak Current Time
+          </button>
+          <button class="btn btn-outline-secondary btn-sm" id="speakDate">
+            <i class="fas fa-calendar me-2"></i>Speak Current Date
+          </button>
+          <button class="btn btn-outline-info btn-sm" id="copyDateTime">
+            <i class="fas fa-copy me-2"></i>Copy Date & Time
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header">
+        <h6 class="mb-0">World Clocks</h6>
+      </div>
+      <div class="card-body">
+        <div id="worldClocks">
+          <div class="mb-2">
+            <strong>New York</strong><br />
+            <span id="nyTime" class="text-muted">Loading...</span>
+          </div>
+          <div class="mb-2">
+            <strong>London</strong><br />
+            <span id="londonTime" class="text-muted">Loading...</span>
+          </div>
+          <div class="mb-2">
+            <strong>Tokyo</strong><br />
+            <span id="tokyoTime" class="text-muted">Loading...</span>
+          </div>
+          <div class="mb-2">
+            <strong>Sydney</strong><br />
+            <span id="sydneyTime" class="text-muted">Loading...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header">
+        <h6 class="mb-0">Module Status</h6>
+      </div>
+      <div class="card-body">
+        <div id="moduleStatus">
+          <div class="text-center">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span class="ms-2">Loading...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  let countdownInterval = null;
+  let countdownActive = false;
+
+  // DOM elements
+  const nepalTime = document.getElementById("nepalTime");
+  const nepalDate = document.getElementById("nepalDate");
+  const utcTime = document.getElementById("utcTime");
+  const utcDate = document.getElementById("utcDate");
+  const currentTime = document.getElementById("currentTime");
+  const currentDate = document.getElementById("currentDate");
+  const dayOfWeek = document.getElementById("dayOfWeek");
+  const monthName = document.getElementById("monthName");
+  const weekendStatus = document.getElementById("weekendStatus");
+  const moduleStatus = document.getElementById("moduleStatus");
+
+  // Update current date and time
+  function updateDateTime() {
+    fetch("/api/datetime/current")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          const dt = data.data;
+          // Update Nepal time (primary display)
+          nepalTime.textContent = dt.nepal_time;
+          nepalDate.textContent = dt.nepal_date;
+
+          // Update UTC time (secondary display)
+          utcTime.textContent = dt.utc_time;
+          utcDate.textContent = dt.utc_date;
+
+          // Update legacy fields for backwards compatibility
+          if (currentTime) currentTime.textContent = dt.current_time;
+          if (currentDate) currentDate.textContent = dt.current_date;
+
+          // Update other info
+          dayOfWeek.textContent = dt.day_of_week;
+          monthName.textContent = dt.month_name;
+          weekendStatus.textContent = dt.is_weekend ? "Weekend" : "Weekday";
+          weekendStatus.className = dt.is_weekend
+            ? "text-success"
+            : "text-info";
+        } else {
+          nepalTime.textContent = "Error";
+          nepalDate.textContent = "Error loading";
+          utcTime.textContent = "Error";
+          utcDate.textContent = "Error loading";
+        }
+      })
+      .catch((error) => {
+        nepalTime.textContent = "Connection Error";
+        nepalDate.textContent = "Failed to load";
+        utcTime.textContent = "Connection Error";
+        utcDate.textContent = "Failed to load";
+      });
+  }
+
+  // Update module status
+  function updateModuleStatus() {
+    fetch("/api/modules/status")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success && data.data.modules.datetime_module) {
+          const dt = data.data.modules.datetime_module;
+          let html = '<div class="small">';
+          html += `<div><strong>Status:</strong> Active</div>`;
+          html += `<div><strong>Timezone:</strong> ${dt.timezone}</div>`;
+          html += `<div><strong>Day:</strong> ${dt.day_of_week}</div>`;
+          html += "</div>";
+          moduleStatus.innerHTML = html;
+        } else {
+          moduleStatus.innerHTML =
+            '<div class="text-danger small">DateTime module not available</div>';
+        }
+      })
+      .catch((error) => {
+        moduleStatus.innerHTML =
+          '<div class="text-danger small">Connection error</div>';
+      });
+  }
+
+  // Update world clocks
+  function updateWorldClocks() {
+    const timezones = {
+      nyTime: "America/New_York",
+      londonTime: "Europe/London",
+      tokyoTime: "Asia/Tokyo",
+      sydneyTime: "Australia/Sydney",
+    };
+
+    Object.entries(timezones).forEach(([elementId, timezone]) => {
+      const element = document.getElementById(elementId);
+      try {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString("en-US", {
+          timeZone: timezone,
+          hour12: true,
+        });
+        element.textContent = timeString;
+      } catch (error) {
+        element.textContent = "Error";
+      }
+    });
+  }
+
+  // Countdown timer
+  document
+    .getElementById("startCountdown")
+    .addEventListener("click", function () {
+      if (countdownActive) return;
+
+      const timeInput = document.getElementById("countdownTime").value;
+      const [hours, minutes] = timeInput.split(":").map(Number);
+      let totalSeconds = hours * 3600 + minutes * 60;
+
+      if (totalSeconds <= 0) {
+        alert("Please enter a valid time");
+        return;
+      }
+
+      countdownActive = true;
+      this.disabled = true;
+      document.getElementById("stopCountdown").disabled = false;
+
+      const display = document.getElementById("countdownDisplay");
+
+      countdownInterval = setInterval(() => {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        display.innerHTML = `<h4 class="text-primary">${hours
+          .toString()
+          .padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds
+          .toString()
+          .padStart(2, "0")}</h4>`;
+
+        if (totalSeconds <= 0) {
+          clearInterval(countdownInterval);
+          display.innerHTML = '<h4 class="text-success">Time\'s Up!</h4>';
+          document.getElementById("startCountdown").disabled = false;
+          document.getElementById("stopCountdown").disabled = true;
+          countdownActive = false;
+
+          // Speak notification if TTS is available
+          fetch("/api/tts/speak", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: "Timer finished!", blocking: false }),
+          }).catch(() => {});
+
+          return;
+        }
+        totalSeconds--;
+      }, 1000);
+    });
+
+  // Stop countdown
+  document
+    .getElementById("stopCountdown")
+    .addEventListener("click", function () {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+      countdownActive = false;
+      document.getElementById("startCountdown").disabled = false;
+      this.disabled = true;
+      document.getElementById("countdownDisplay").innerHTML =
+        '<h4 class="text-muted">00:00:00</h4>';
+    });
+
+  // Calculate time until
+  document
+    .getElementById("calculateTimeUntil")
+    .addEventListener("click", function () {
+      const targetTime = document.getElementById("targetTime").value;
+      if (!targetTime) {
+        alert("Please select a target time");
+        return;
+      }
+
+      const now = new Date();
+      const target = new Date();
+      const [hours, minutes] = targetTime.split(":").map(Number);
+      target.setHours(hours, minutes, 0, 0);
+
+      // If target time has passed today, assume tomorrow
+      if (target < now) {
+        target.setDate(target.getDate() + 1);
+      }
+
+      const diff = target - now;
+      const diffHours = Math.floor(diff / (1000 * 60 * 60));
+      const diffMinutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+      document.getElementById("timeUntilDisplay").innerHTML = `
+        <div class="alert alert-info">
+            <strong>${diffHours} hours and ${diffMinutes} minutes</strong><br>
+            <small>until ${target.toLocaleTimeString("en-US", {
+              hour12: true,
+            })}</small>
+        </div>
+    `;
+    });
+
+  // Natural language parsing
+  document.getElementById("parseTime").addEventListener("click", function () {
+    const naturalTime = document.getElementById("naturalTime").value.trim();
+    if (!naturalTime) {
+      alert("Please enter a time expression");
+      return;
+    }
+
+    // This is a simple client-side demo - in reality, you'd send to the backend
+    const result = document.getElementById("parseResult");
+    result.innerHTML = `
+        <div class="alert alert-warning">
+            <strong>Note:</strong> Natural language parsing is currently a demo feature.<br>
+            You entered: "<em>${naturalTime}</em>"<br>
+            <small>Full parsing would be handled by the backend datetime module.</small>
+        </div>
+    `;
+  });
+
+  // Quick actions
+  document.getElementById("speakTime").addEventListener("click", function () {
+    const timeText = `The current time is ${currentTime.textContent}`;
+    fetch("/api/tts/speak", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: timeText, blocking: false }),
+    }).catch(() => alert("Text-to-speech not available"));
+  });
+
+  document.getElementById("speakDate").addEventListener("click", function () {
+    const dateText = `Today is ${dayOfWeek.textContent}, ${currentDate.textContent}`;
+    fetch("/api/tts/speak", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: dateText, blocking: false }),
+    }).catch(() => alert("Text-to-speech not available"));
+  });
+
+  document
+    .getElementById("copyDateTime")
+    .addEventListener("click", function () {
+      const dateTimeText = `${currentDate.textContent} ${currentTime.textContent}`;
+      navigator.clipboard
+        .writeText(dateTimeText)
+        .then(() => {
+          alert("Date and time copied to clipboard!");
+        })
+        .catch(() => {
+          alert("Failed to copy to clipboard");
+        });
+    });
+
+  // Initialize
+  updateDateTime();
+  updateModuleStatus();
+  updateWorldClocks();
+
+  // Update every second
+  setInterval(updateDateTime, 1000);
+  setInterval(updateWorldClocks, 1000);
+  setInterval(updateModuleStatus, 5000);
+</script>
+{% endblock %}
